@@ -40,4 +40,4 @@ class ActionController:
         if action_message:
             print(action_message)
 
-        return action_messages
+        return action_message
