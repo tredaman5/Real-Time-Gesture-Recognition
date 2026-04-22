@@ -1,7 +1,9 @@
-from src.utils import distance, get_landmark_points
-
+from src.utils import get_landmark_points
 
 THUMB_TIP = 4
+THUMB_IP = 3
+THUMB_MCP = 2
+
 INDEX_TIP = 8
 MIDDLE_TIP = 12
 RING_TIP = 16
@@ -12,42 +14,53 @@ MIDDLE_PIP = 10
 RING_PIP = 14
 PINKY_PIP = 18
 
-WRIST = 0
-
 
 def is_finger_up(points, tip_idx: int, pip_idx: int) -> bool:
     return points[tip_idx][1] < points[pip_idx][1]
 
 
-def classify_gesture(hand_landmarks) -> str:
+def is_thumb_up(points) -> bool:
+    # Simple starter rule for thumb:
+    # thumb tip above thumb joint = thumb up
+    return points[THUMB_TIP][1] < points[THUMB_IP][1]
+
+
+def get_finger_states(hand_landmarks):
     points = get_landmark_points(hand_landmarks)
 
-    index_up = is_finger_up(points, INDEX_TIP, INDEX_PIP)
-    middle_up = is_finger_up(points, MIDDLE_TIP, MIDDLE_PIP)
-    ring_up = is_finger_up(points, RING_TIP, RING_PIP)
-    pinky_up = is_finger_up(points, PINKY_TIP, PINKY_PIP)
+    thumb = 1 if is_thumb_up(points) else 0
+    index = 1 if is_finger_up(points, INDEX_TIP, INDEX_PIP) else 0
+    middle = 1 if is_finger_up(points, MIDDLE_TIP, MIDDLE_PIP) else 0
+    ring = 1 if is_finger_up(points, RING_TIP, RING_PIP) else 0
+    pinky = 1 if is_finger_up(points, PINKY_TIP, PINKY_PIP) else 0
 
-    thumb_tip = points[THUMB_TIP]
-    wrist = points[WRIST]
-    index_tip = points[INDEX_TIP]
-    middle_tip = points[MIDDLE_TIP]
+    return [thumb, index, middle, ring, pinky]
 
-    thumb_far_from_wrist = distance(thumb_tip, wrist) > 0.2
-    index_middle_close = distance(index_tip, middle_tip) < 0.08
 
-    if index_up and middle_up and ring_up and pinky_up and thumb_far_from_wrist:
-        return "Open Palm"
+def classify_gesture(hand_landmarks) -> str:
+    fingers = get_finger_states(hand_landmarks)
 
-    if not index_up and not middle_up and not ring_up and not pinky_up:
+    # [thumb, index, middle, ring, pinky]
+
+    if fingers == [0, 0, 0, 0, 0]:
         return "Fist"
 
-    if index_up and middle_up and not ring_up and not pinky_up and not index_middle_close:
-        return "Peace Sign"
-
-    if index_up and not middle_up and not ring_up and not pinky_up:
+    if fingers == [0, 1, 0, 0, 0]:
         return "Pointing"
 
-    if thumb_far_from_wrist and not index_up and not middle_up and not ring_up and not pinky_up:
+    if fingers == [0, 1, 1, 0, 0]:
+        return "Peace Sign"
+
+    if fingers == [0, 1, 1, 1, 0]:
+        return "Three"
+
+    if fingers == [0, 1, 1, 1, 1]:
+        return "Four"
+
+    if fingers == [1, 1, 1, 1, 1]:
+        return "Open Palm"
+
+    if fingers == [1, 0, 0, 0, 0]:
         return "Thumbs Up"
 
     return "Unknown"
